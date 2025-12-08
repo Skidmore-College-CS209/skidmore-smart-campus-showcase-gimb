@@ -1,1 +1,703 @@
+#Izzy Streeper, Marah Frese-Despins, Brianna Sponheimer, Grant Raincsuk
+#This is our event system for the new wellness center
+
+
+#Everything neccesary to import
+import tkinter as tk
+from tkinter import *
+from tkinter import messagebox
+from tkinter import ttk
+import math
+from collections import defaultdict #import defaultdict to create inverted index
+import re #import regex for searches
+from CategorySearch import HashTable
+from PIL import Image, ImageTk
+from datetime import datetime, timedelta
+
+class HashTable: #Our class for the date hashtable
+    def __init__(self, startdate, size):
+        self.dates = {}
+        self.size = size
+        startdate = datetime.strptime(startdate, '%Y/%m/%d')
+        for i in range(size): #creates size keys/value pairs, incrementing based on the start date
+            start = startdate.strftime('%Y/%m/%d')
+            self.dates[start] = []
+            startdate += timedelta(days=1)   
+             
+               
+    def add(self, key, value): #adds an event based on day
+        self.dates[key].append(value)
+
+
+    def delete(self, key, value): #deletes an event based on day
+        self.dates[key].remove(value)
+
+    def get_keys(self): #returns all the dates
+        keys = []
+        for key in self.dates.keys():
+            keys.append(key)
+        return keys
+    
+    def get_index(self, key, event): #gets index of event in a list based on the date
+        value = self.dates[key]
+        index = value.index(event)
+        return index
+    
+    def values(self):
+        return self.dates.values()
+
+    def edit(self, key, event, aspect, value): #user inputs the day of the event, the name of the event, what they want to change it to
+        index = self.get_index(key, event)
+        if aspect == 'name':
+            self.dates[key][index].set_name(value)
+        if aspect == 'date':
+            self.delete(key, event)
+            self.add(value, event)
+            self.dates[value][index].set_date(value)
+        if aspect == 'time':
+            self.dates[key][index].set_time(value)
+        if aspect == 'desc':
+            self.dates[key][index].set_desc(value)
+        if aspect == 'location':
+            self.dates[key][index].set_location(value)
+
+
+class Event: #our class structure for events 
+    def __init__(self, name=None, category=None, date=None, time=None, desc=None, location=None):
+        self.name = name
+        self.category = category
+        self.date = date
+        self.time = time
+        self.desc = desc
+        self.location = location
+
+    def get_name(self):
+        return self.name
+    
+    def get_category(self):
+        return self.category
+
+    def set_name(self, name):
+        self.name = name
+
+    def get_date(self):
+        return self.date
+
+    def set_date(self, date):
+        self.date = date
+
+    def get_time(self):
+        return self.time
+
+    def set_time(self, time):
+        self.time = time
+
+    def get_desc(self):
+        return self.desc
+
+    def set_desc(self, desc):
+        self.desc = desc
+
+    def get_location(self):
+        return self.location
+
+    def set_location(self, location):
+        self.location = location
+
+events = [
+    Event(name="MWC Open House & Vendor Fair", date="2025/01/22", time="12:00 PM",
+          desc="Lobby event with vendors (BARE Blends, 9 Miles East, KEY Sparkling Water) + tours of the new Wellness Center",
+          location="McCaffery‑Wagman Tennis & Wellness Center", category="Wellness"),
+
+    Event(name="Intro to Cardio & Weight‑Room Equipment", date="2025/01/23", time="3:00 PM",
+          desc="Orientation session by strength & conditioning staff for students/faculty to learn proper use of machines",
+          location="McCaffery‑Wagman Fitness Center", category="Workout"),
+
+    Event(name="Spin Class", date="2025/02/10", time="6:00 PM",
+          desc="Group spin‑bike class open to all skill levels",
+          location="McCaffery‑Wagman Group Fitness Studio", category="Workout"),
+
+    Event(name="Yoga Class", date="2025/02/12", time="5:00 PM",
+          desc="Community yoga class — flexibility, relaxation, mindfulness",
+          location="McCaffery‑Wagman Group Fitness Studio", category="Workout"),
+
+    Event(name="Pilates Class", date="2025/02/14", time="4:00 PM",
+          desc="Mat‑Pilates class focusing on core strength and posture",
+          location="McCaffery‑Wagman Group Fitness Studio", category="Workout"),
+
+    Event(name="Indoor Tennis Session – Open Court", date="2025/03/03", time="7:00 PM",
+          desc="Drop‑in indoor tennis — rackets provided; all students welcome",
+          location="McCaffery‑Wagman Indoor Tennis Courts", category="Sports"),
+
+    Event(name="Martial Arts / Self‑Defense Class", date="2025/03/05", time="5:30 PM",
+          desc="Beginner martial arts / self‑defense class offered in wellness center studio space",
+          location="McCaffery‑Wagman Multipurpose Studio", category="Sports"),
+
+    Event(name="Peer Health Educator Hours", date="2025/04/01", time="2:00 PM",
+          desc="Stop by for peer educators, wellness resources, info, and therapy-dog hours",
+          location="McCaffery‑Wagman Wellness Center Lounge", category="Wellness"),
+
+    Event(name="Meditation & Mindfulness Session", date="2025/04/03", time="6:30 PM",
+          desc="Guided group meditation for stress relief and mental health",
+          location="McCaffery‑Wagman Group Fitness Studio", category="Wellness"),
+
+    Event(name="Open Gym – Weight Room", date="2025/04/05", time="7:00 AM",
+          desc="Open weight‑room hours for free weights and machines (members only)",
+          location="McCaffery‑Wagman Fitness Center", category="Workout"),
+
+    Event(name="Cardio Session – Treadmill & Elliptical", date="2025/04/05", time="8:00 AM",
+          desc="Cardio‑only workout time in the cardio area (no class, open to all)",
+          location="McCaffery‑Wagman Fitness Center", category="Workout"),
+
+    Event(name="Aqua Aerobics Class", date="2025/04/22", time="11:00 AM",
+          desc="Water-based aerobic workout for all fitness levels",
+          location="McCaffery‑Wagman Pool", category="Workout"),
+
+    Event(name="Table Tennis Tournament", date="2025/04/23", time="2:00 PM",
+          desc="Friendly competition for students in table tennis",
+          location="McCaffery‑Wagman Multipurpose Studio", category="Sports"),
+
+    Event(name="Group Stretching Session", date="2025/04/24", time="5:00 PM",
+          desc="Flexibility and mobility focused group stretching",
+          location="McCaffery‑Wagman Group Fitness Studio", category="Workout"),
+
+    Event(name="Indoor Rowing Clinic", date="2025/04/25", time="4:00 PM",
+          desc="Technique and endurance session on rowing machines",
+          location="McCaffery‑Wagman Fitness Center", category="Workout"),
+
+    Event(name="Kickball Open Play", date="2025/04/26", time="3:30 PM",
+          desc="Fun indoor kickball session in multipurpose court",
+          location="McCaffery‑Wagman Multipurpose Studio", category="Sports"),
+
+    Event(name="Guided Nature Walk & Mindfulness", date="2025/04/27", time="1:00 PM",
+          desc="Walk around campus with mindfulness exercises",
+          location="Meet at McCaffery‑Wagman Lobby", category="Wellness"),
+
+    Event(name="Balance & Stability Workshop", date="2025/04/28", time="6:00 PM",
+          desc="Exercises focusing on balance, posture, and core",
+          location="McCaffery‑Wagman Group Fitness Studio", category="Workout"),
+
+    Event(name="Indoor Badminton Open Play", date="2025/04/29", time="5:00 PM",
+          desc="Casual indoor badminton games for all skill levels",
+          location="McCaffery‑Wagman Multipurpose Studio", category="Sports"),
+
+    Event(name="Tai Chi Session", date="2025/04/30", time="4:30 PM",
+          desc="Slow, mindful movements for relaxation and balance",
+          location="McCaffery‑Wagman Group Fitness Studio", category="Wellness"),
+
+    Event(name="Circuit Training Express", date="2025/05/01", time="6:00 PM",
+          desc="Quick full-body circuit workout for strength and cardio",
+          location="McCaffery‑Wagman Fitness Center", category="Workout"),
+
+    Event(name="Indoor Pickleball Play", date="2025/05/02", time="5:30 PM",
+          desc="Students can play casual indoor pickleball",
+          location="McCaffery‑Wagman Multipurpose Studio", category="Sports"),
+
+    Event(name="Wellness Journaling Workshop", date="2025/05/03", time="3:00 PM",
+          desc="Reflective journaling to reduce stress and improve wellbeing",
+          location="McCaffery‑Wagman Wellness Center Lounge", category="Wellness"),
+
+    Event(name="Spin & Strength Combo Class", date="2025/05/04", time="5:00 PM",
+          desc="Hybrid class combining spin intervals with bodyweight exercises",
+          location="McCaffery‑Wagman Group Fitness Studio", category="Workout"),
+
+    Event(name="Core Conditioning Bootcamp", date="2025/05/05", time="6:00 PM",
+          desc="High-intensity core and ab-focused bootcamp",
+          location="McCaffery‑Wagman Fitness Center", category="Workout"),
+
+    Event(name="Mindfulness & Breathing Workshop", date="2025/05/06", time="4:00 PM",
+          desc="Breathing exercises and mindfulness techniques",
+          location="McCaffery‑Wagman Wellness Center Lounge", category="Wellness"),
+
+    Event(name="Indoor Soccer Tournament", date="2025/05/07", time="5:30 PM",
+          desc="Friendly tournament in the multipurpose court",
+          location="McCaffery‑Wagman Multipurpose Studio", category="Sports"),
+
+    Event(name="Barre & Stretch Fusion", date="2025/05/08", time="5:00 PM",
+          desc="Blend of barre techniques and stretching for flexibility and strength",
+          location="McCaffery‑Wagman Group Fitness Studio", category="Workout"),
+
+    Event(name="Wellness Nutrition Cooking Demo", date="2025/05/09", time="3:00 PM",
+          desc="Healthy cooking demonstration with campus nutrition staff",
+          location="McCaffery‑Wagman Wellness Center Lounge", category="Wellness"),
+
+    Event(name="Indoor Volleyball Skills Clinic", date="2025/05/10", time="5:00 PM",
+          desc="Improve volleyball technique and gameplay",
+          location="McCaffery‑Wagman Multipurpose Studio", category="Sports"),
+
+    Event(name="TRX Suspension Core Blast", date="2025/05/11", time="6:00 PM",
+          desc="High-intensity TRX workout for core and full body",
+          location="McCaffery‑Wagman Group Fitness Studio", category="Workout"),
+
+    Event(name="Guided Relaxation & Meditation", date="2025/05/12", time="4:30 PM",
+          desc="Wind-down session focusing on relaxation techniques",
+          location="McCaffery‑Wagman Wellness Center Lounge", category="Wellness")
+]
+
+
+#start of date hash table
+date_table = HashTable("2025/01/01", 365)
+
+#adds all events into date hash table
+for event in events:
+    date_table.add(event.get_date(), event)
+
+
+
+# Start of GUI Functions
+root = tk.Tk()
+root.geometry('500x500')
+root.title('McCaffery-Wagman Events')
+img = Image.open("C:/Users/marah/Downloads/Data Strucutres Files/DS Files for Pres/Wagman photo.png")
+img = img.resize((600, 600))  # Resize to window size
+bg = ImageTk.PhotoImage(img)
+label = tk.Label(root, image=bg)
+label.place(x=0, y=0, relwidth=1, relheight=1)
+
+
+
+def open_blank():
+    new_window = tk.Toplevel(root)
+    new_window.geometry('600x600')
+    return new_window
+
+def admin_access(table):
+    admin_window = open_blank()
+    admin_window.title('Adminstrator Password')
+    pw_entry = tk.StringVar()
+    label = tk.Label(admin_window, text='Enter Admin Password:')
+    label.pack(pady=10)
+
+    entry = tk.Entry(admin_window, textvariable=pw_entry, width = 40, show='*')
+    entry.pack(pady=5)
+
+    message_label = tk.Label(admin_window, text='')
+    message_label.pack(pady=5)
+    
+    def destroy_all_children(parent_widget): #clears all frames from a parent
+        for widget in parent_widget.winfo_children():
+            widget.destroy()
+
+    def _refresh(table, master): #refreshes GUI
+        destroy_all_children(master)
+        add_widgets(table)
+
+    def delete_event(date, event, frame, table): #deletes event from hashtable and GUI
+        table.delete(date, event)
+        frame.destroy()
+
+
+    def delete_confirmation(frame, event, table): #confirms deleting event
+        response = messagebox.askyesno("Delete Event", "Are you sure?")
+        if response:
+            delete_event(event.get_date(), event, frame, table)
+
+
+    def makeeventframe(event, table, masterframe, master): #takes all the data from event object, makes a frame with it and returns it
+        
+        frame = tk.Frame(master=masterframe, relief=tk.GROOVE, borderwidth=5, width=300, height=200)
+        
+        title = Label(master=frame, text=event.get_name())
+        date = Label(master=frame, text=event.get_date())
+        time = Label(master=frame, text=event.get_time())
+        desc = Label(master=frame, text=event.get_desc())
+        location = Label(master=frame, text=event.get_location())
+        
+        delete = tk.Button(frame, text='DELETE', command=lambda: delete_confirmation(frame, event, table))
+        edit = tk.Button(frame, text='EDIT', command=lambda: edit_window(event, table, master))
+        
+        title.pack()
+        date.pack()
+        time.pack()
+        desc.pack()
+        location.pack() 
+        delete.pack()
+        edit.pack()
+        
+        return frame
+
+    def edit_window(event, table, master): #brings up a new window for editing events
+
+        window = tk.Toplevel(master)
+        
+        Label(window, text="Change Name").pack() 
+        name = tk.Entry(window)
+        name.pack()
+        name.insert(0, event.get_name())
+        tk.Button(window, text="Submit", command=lambda: edit_aspect(event.get_date(), event, "name", name.get(), table)).pack()
+        
+        Label(window, text="Change Date").pack()
+        opt = StringVar(value= event.get_date())
+        date = OptionMenu(window, opt, *table.get_keys())
+        date.pack()
+        tk.Button(window, text="Submit", command=lambda: edit_aspect(event.get_date(), event, "date", opt.get(), table)).pack()
+        
+        Label(window, text="Change Description").pack()
+        desc = tk.Entry(window)
+        desc.pack()
+        desc.insert(0, event.get_desc())
+        tk.Button(window, text="Submit", command=lambda: edit_aspect(event.get_date(), event, "desc", desc.get(), table)).pack()
+        
+        Label(window, text="Change Time (XX:XX AM/PM)").pack()
+        time = tk.Entry(window)
+        time.pack()
+        time.insert(0, event.get_time())
+        tk.Button(window, text="Submit", command=lambda: edit_aspect(event.get_date(), event, "time", time.get(), table)).pack()
+        
+        Label(window, text="Change Location").pack()
+        location = tk.Entry(window)
+        location.pack()
+        location.insert(0, event.get_location())
+        tk.Button(window, text="Submit", command=lambda: edit_aspect(event.get_date(), event, "location", location.get(), table)).pack()
+        
+        tk.Button(window, text='Save Changes and Close', command=lambda: _refresh(table, master)).pack()
+
+    def edit_aspect(key, event, aspect, value, table): #used in the edit function to change the data in the hash table and event at the same time
+        table.edit(key, event, aspect, value)
+        if aspect == 'name':
+            event.set_name(value)
+        if aspect == 'date':
+            event.set_date(value)
+        if aspect == 'time':
+            event.set_time(value)
+        if aspect == 'desc':
+            event.set_desc(value)
+        if aspect == 'location':
+            event.set_location(value)
+
+
+    def eventsfromlist(table, master): #compiles all the events from the table
+        
+        i = 0 #this section gets a count of every event, so it knows how many pages to make
+        events = []
+
+        for value in table.values():
+            if value:
+                for event in value:
+                    events.append(event)
+                    i += 1
+
+        pages = math.ceil(i/3) #3 events per page
+        count = 0
+        pageframes = {}
+        
+        for page in range(pages): #makes 3 event frames per loop and adds them to one page
+
+            pageframe = tk.Frame(master=master)
+            eventframe = tk.Frame(master=pageframe)
+
+            for event in events[count:count+3]:
+                event_f = makeeventframe(event, table, eventframe, master)
+                event_f.pack()
+            
+            eventframe.pack()
+
+            pagenum = page + 1
+
+            tk.Label(pageframe, text= f"Page {page+1}/{pages}").pack()
+            if page < pages-1:
+                tk.Button(pageframe, text="NEXT", command=lambda p = pagenum: show_page(p + 1, pageframes)).pack(side='right')
+            if page > 0:
+                tk.Button(pageframe, text="BACK", command=lambda p = pagenum: show_page(p - 1, pageframes)).pack(side='left')   
+
+            
+            page_name = f"page_{pagenum}"
+            pageframes[page_name] = pageframe
+            
+            count += 3
+
+        pageframes['page_1'].pack()
+
+
+
+
+    def show_page(page, pageframes): #makes the current page invisible and the former or next page visible
+
+        for frame in pageframes.values():
+            frame.pack_forget()
+            
+        pageframes[f'page_{page}'].pack()
+        
+
+
+
+    def set_eventslist(list): #could be used to change the event table the code takes from
+        eventslist = list
+        return eventslist
+
+
+    def addwindow(table, master): #brings up window for creating new events
+        event = Event()
+        window = tk.Toplevel(master)
+
+        Label(window, text="Name").pack()
+        name = tk.Entry(window)
+        name.pack()
+        tk.Button(window, text="Submit", command=lambda: event.set_name(name.get())).pack()
+
+        Label(window, text="Date").pack()
+        opt = StringVar(value= "Select Date")
+        date = OptionMenu(window, opt, *table.get_keys())
+        date.pack()
+        tk.Button(window, text="Submit", command=lambda: event.set_date(opt.get())).pack()
+        
+        Label(window, text="Description").pack()
+        desc = tk.Entry(window)
+        desc.pack()
+        tk.Button(window, text="Submit", command=lambda: event.set_desc(desc.get())).pack()
+
+        Label(window, text="Time").pack()
+        time = tk.Entry(window)
+        time.pack()
+        tk.Button(window, text="Submit", command=lambda: event.set_time(time.get())).pack()
+
+        Label(window, text="Location").pack()
+        location = tk.Entry(window)
+        location.pack()
+
+        tk.Button(window, text="Submit", command=lambda: event.set_location(location.get())).pack()
+        tk.Button(window, text='Save Changes and Close', command=lambda: save_and_close(event, table, master)).pack()
+
+
+    def save_and_close(event, table, master): #checks valid date is selected and refreshes the event GUI when edits are saved
+        try:
+            table.add(event.get_date(), event)
+        except Exception:
+            messagebox.showerror("Error", "Invalid data given. Please make sure a date is selected.")
+        else:    
+            _refresh(table, master)
+        
+
+    def add_widgets(table): #creates the starting GUI
+        master = tk.Tk()
+        master.geometry('700x650')
+        master.title('Events')
+
+        Label(master=master, text='EVENT LIST').pack()
+        tk.Button(master=master, text="ADD EVENT", command=lambda: addwindow(table, master)).pack()
+        tk.Button(master, text="refresh", command=lambda: _refresh(table, master)).pack()
+
+        eventsfromlist(table, master)
+    
+    def check_pw(table):
+        if  pw_entry.get() == 'skadoosh':
+            message_label.config(text='Access Granted!', fg='green')
+            message_label.pack(pady=5)
+            add_widgets(table)
+            
+        else:
+            message_label.config(text='Wrong Password!', fg='red')
+            message_label.pack(pady=5)
+            entry.delete(0, tk.END)
+
+
+            
+
+    submit_button = tk.Button(admin_window, text= 'Submit', command=lambda: check_pw(table))
+    submit_button.pack(pady=5)
+    
+    entry.bind('<Return>', lambda event: check_pw(table)) 
+
+
+
+    
+def student_access():
+    student_window = open_blank()
+    student_window.title('Search Events')
+    student_window.geometry('650x650')
+    student_window.configure(bg="lightblue")
+
+    container = tk.Frame(student_window)
+    container.pack(fill="both", expand=True, padx=20, pady=10)
+
+    canvas = tk.Canvas(container, highlightthickness=0)
+    canvas.pack(side="left", fill="both", expand=True)
+
+    scrollbar = tk.Scrollbar(container, orient="vertical", command=canvas.yview)
+    scrollbar.pack(side="right", fill="y")
+
+    canvas.configure(yscrollcommand=scrollbar.set)
+
+    results_frame = tk.Frame(canvas, width=100, height=100)
+    results_window = canvas.create_window((0, 0), window=results_frame, anchor="nw")
+
+    def on_frame_configure(event):
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
+    def on_canvas_resize(event):
+        canvas.itemconfig(results_window, width=event.width)
+
+    results_frame.bind("<Configure>", on_frame_configure)
+    canvas.bind("<Configure>", on_canvas_resize)
+
+    def _on_mousewheel(event):
+        canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+    canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+    search_frame = tk.Frame(student_window)
+    search_frame.pack(pady=10)
+
+    search_label = tk.Label(search_frame, text='Search for an event:')
+    search_label.pack(pady=10)
+    search_entry = tk.StringVar()
+    search = tk.Entry(search_frame, textvariable=search_entry, width=40)
+    search.pack(pady=5)
+
+    def display_results(events_to_show):
+        for widget in results_frame.winfo_children():
+            widget.destroy()
+
+        if events_to_show is None: 
+            events_to_show = []
+            for day_events in date_table.values():
+                events_to_show.extend(day_events)
+
+        if not events_to_show:
+            tk.Label(results_frame, text="No events found.", fg='red').pack()
+            return
+        for event in events_to_show:
+            text = f"{event.get_name()} - {event.get_time()} - {event.get_location()} - {event.get_date()}"
+            tk.Button(results_frame, text=text, width=60, anchor="w").pack(pady=4)
+
+#category filter
+    category_frame = tk.Frame(student_window)
+    category_frame.pack(pady=10)
+    category_label = tk.Label(category_frame, text="Select a category:").pack(anchor="w")
+    categories = ["Sports", "Wellness", "Workout", "All Categories"]
+    category_var = tk.StringVar()
+    category_var.set(categories[0])
+    category_menu = tk.OptionMenu(category_frame, category_var, *categories)
+    category_menu.pack(anchor='w', pady=5)
+
+
+    def category_search():
+        selected_category = category_var.get()
+        if selected_category == "All Categories":
+            events_to_show = []
+            for day_events in date_table.values():
+                events_to_show.extend(day_events)
+        else:
+            events_to_show = [event for day_events in date_table.values() 
+                          for event in day_events 
+                          if event.get_category() == selected_category]
+    
+        display_results(events_to_show)
+
+        
+    tk.Button(category_frame, text="Search by category", command=category_search).pack(pady=5)
+#time sorting 
+    time_frame = tk.Frame(student_window)
+    time_frame.pack(pady=10)
+
+    def event_to_datetime(event):
+        # Format:      2025/11/10   and   11:00 AM
+        dt_str = f"{event.get_date()} {event.get_time()}"
+        return datetime.strptime(dt_str, "%Y/%m/%d %I:%M %p")
+
+    # Sorts events based on dropdown choice
+    def sort_events(events, mode):
+        if mode == "Soonest → Farthest":
+            return sorted(events, key=event_to_datetime)
+        elif mode == "Farthest → Soonest":
+            return sorted(events, key=event_to_datetime, reverse=True)
+        return events
+    
+    def update_sort(*args):
+        all_events = []
+        for day_events in date_table.values():
+            all_events.extend(day_events)
+        display_events(student_window, all_events)
+
+    sort_mode = tk.StringVar(value="Soonest → Farthest")
+
+    sort_label = tk.Label(student_window, text="Sort events by time:")
+    sort_label.pack(pady=5)
+
+    sort_dropdown = tk.OptionMenu(
+        student_window,
+        sort_mode,
+        "Soonest → Farthest",
+        "Farthest → Soonest",
+        command=lambda _: update_sort()
+)
+
+    sort_dropdown.pack(pady=5)
+
+
+    def create_ii(events): #creates inverted index of words for all events 
+        index = defaultdict(set)
+        for event in events:
+            text = f"{event.get_name()} {event.get_desc()} {event.get_location()}".lower()
+            words = re.findall(r'[a-z0-9]+', text)
+            for word in words: 
+                index[word].add(event)
+        return index 
+
+    inverted_index = create_ii(events)
+
+
+    def display_events(student_window, events):
+        if events is None:
+            events = []
+            for day_events in date_table.values():
+                events.extend(day_events)
+        sorted_list = sort_events(events, sort_mode.get())
+
+        for widget in results_frame.winfo_children():
+            widget.destroy()
+
+        for event in sorted_list:
+            text = f'{event.get_name()} - {event.get_time()} - {event.get_location()} - {event.get_date()}'
+            event_button = tk.Button(results_frame, text=text)
+            event_button.pack(pady=5)
+
+
+
+    def run_search():
+        query = search_entry.get().lower()
+        words = re.findall(r'[a-z0-9]+', query)
+        results = set()
+        
+        # Rebuild inverted index dynamically from current events
+        inverted_index = defaultdict(set)
+        for day_events in date_table.values():
+            for event in day_events:
+                text = f"{event.get_name()} {event.get_desc()} {event.get_location()}".lower()
+                for word_in_text in re.findall(r'[a-z0-9]+', text):
+                    inverted_index[word_in_text].add(event)
+        
+        for word in words:
+            if word in inverted_index:
+                results.update(inverted_index[word])
+        
+        display_results(list(results))
+
+    
+    def clear_search():
+        search_entry.set('')
+        for widget in results_frame.winfo_children():
+            widget.destroy()
+    
+    search_button = tk.Button(search_frame, text= 'Search', command=run_search)
+    search_button.pack(pady=5)
+
+    search.bind('<Return>', lambda event: run_search()) 
+
+    clear_button = tk.Button(student_window, text='Clear Search', command=clear_search)
+    clear_button.pack(pady=5)
+
+student_button = tk.Button(root, text='Student Access', command=student_access, anchor='center', cursor='hand2')
+student_button.pack(pady=10)
+
+admin_button = tk.Button(root, text='Admin Access', command=lambda: admin_access(date_table), anchor='center', cursor='hand2')
+admin_button.pack(pady=5)
+
+root.mainloop()
+#end of GUI Functions
+#use check button for drop down
+
+
+
+
 
