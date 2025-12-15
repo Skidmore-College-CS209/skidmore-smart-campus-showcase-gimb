@@ -247,7 +247,7 @@ for event in events:
 root = tk.Tk()
 root.geometry('500x500')
 root.title('McCaffery-Wagman Events')
-img = Image.open("C:/Users/marah/Downloads/Data Strucutres Files/DS Files for Pres/Wagman photo.png")
+img = Image.open("C:/Users/marah/Downloads/Data Strucutres Files/DS Files for Pres/Wagman photo.png") #you'll need to change this variable to whatever path the image is saved to in your computer
 img = img.resize((600, 600))  # Resize to window size
 bg = ImageTk.PhotoImage(img)
 label = tk.Label(root, image=bg)
